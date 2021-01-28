@@ -11,7 +11,7 @@ var uiController = (function () {
   return {
     getInput: function () {
       return {
-        type: document.querySelector(DOMstrings.inputType).value,
+        type: document.querySelector(DOMstrings.inputType).value, // inc or exp iig butsaana
         description: document.querySelector(DOMstrings.inputDescription).value,
         value: document.querySelector(DOMstrings.inputValue).value,
       };
@@ -26,19 +26,22 @@ var uiController = (function () {
 var financeController = (function () {
   // baiguulagch function ashiglaad object hiie
 
+  //private function
   var Income = function (id, description, value) {
     this.id = id;
     this.description = description;
     this.value = value;
   };
+  //private function
   var Expense = function (id, description, value) {
     this.id = id;
     this.description = description;
     this.value = value;
   };
+  //private data
 
   var data = {
-    allItems: {
+    items: {
       inc: [],
       exp: [],
     },
@@ -48,18 +51,42 @@ var financeController = (function () {
       exp: 0,
     },
   };
+
+  return {
+    addItem: function (type, desc, val) {
+      var item;
+      var id;
+
+      // id = identification massive dotor buh zarlaguudaa hiisen bgaa shineer zarlaga orj irehed masssive iin idnuudiin hamgiin suuliinhiin n id g abad 1 iig nemj yavahaar hiie
+      if (data.items[type].length === 0) id = 1;
+      else {
+        id = data.items[type][data.items[type].length - 1].id + 1;
+      }
+      if (type === 'inc') {
+        item = new Income(id, desc, val);
+      } else {
+        //type === exp
+        item = new Expense(id, desc, val);
+      }
+      data.items[type].push(item);
+    },
+
+    seeData: function () {
+      return data;
+    },
+  };
 })();
 
 // programm iig holbogch controller
 var appController = (function (uiController, financeController) {
   var ctrlAddItem = function () {
     //1. oruulah ugugdliig delegtsees olj avna
-    console.log(uiController.getInput());
-
+    var input = uiController.getInput();
+    console.log(input);
     // 2. olj avsan ugugdluuudee sanhuugiin controllert damjuulj tand hadgalna
-    //olj avsan ugugdluudiig web deeree tohitoh hesegt n gargana
+    financeController.addItem(input.type, input.description, input.value);
 
-    // 3.
+    // 3.olj avsan ugugdluudiig web deeree tohitoh hesegt n gargana
 
     // 4. tusviig tootsoolno
 
