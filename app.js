@@ -8,6 +8,10 @@ var uiController = (function () {
     addBtn: '.add__btn',
     incomeList: '.income__list',
     expenseList: '.expenses__list',
+    tusuvLabel: '.budget__value',
+    incomeLabel: '.budget__income--value',
+    expenseLabel: '.budget__expenses--value',
+    percentageLabel: '.budget__expenses--percentage',
   };
 
   return {
@@ -40,6 +44,23 @@ var uiController = (function () {
 
       // sumiig haana baiglahiig zaadag bih element focus tai bgaa
       fieldsArr[0].focus();
+    },
+
+    // tusviig web deer uzuuleh
+    tusviigUzuuleh: function (tusuv) {
+      document.querySelector(DOMstrings.tusuvLabel).textContent = tusuv.tusuv;
+      document.querySelector(DOMstrings.incomeLabel).textContent =
+        tusuv.totalInc;
+      document.querySelector(DOMstrings.expenseLabel).textContent =
+        tusuv.totalExp;
+
+      if (tusuv.huvi !== 0) {
+        document.querySelector(DOMstrings.percentageLabel).textContent =
+          tusuv.huvi + '%';
+      } else {
+        document.querySelector(DOMstrings.percentageLabel).textContent =
+          tusuv.huvi;
+      }
     },
 
     addListItem: function (item, type) {
@@ -185,7 +206,7 @@ var appController = (function (uiController, financeController) {
       var tusuv = financeController.tusviigAvah();
 
       // 6. Tusviin tootsoog delgetsend gargana.
-      console.log(tusuv);
+      uiController.tusviigUzuuleh(tusuv);
     }
   };
 
@@ -206,6 +227,12 @@ var appController = (function (uiController, financeController) {
   return {
     init: function () {
       console.log(' Application started ....');
+      uiController.tusviigUzuuleh({
+        tusuv: 0,
+        huvi: 0,
+        totalInc: 0,
+        totalExp: 0,
+      });
       setupEventListeners();
     },
   };
