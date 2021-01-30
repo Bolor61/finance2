@@ -13,9 +13,59 @@ var uiController = (function () {
     expenseLabel: '.budget__expenses--value',
     percentageLabel: '.budget__expenses--percentage',
     containerDiv: '.container',
+    expensePercentageLabel: '.item__percentage',
+    dateLabel: '.budget__title--month',
+  };
+
+  var nodeListForeach = function (list, callback) {
+    for (var i = 0; i < list.length; i++) {
+      callback(list[i], i);
+    }
+  };
+
+  var formatMoney = function (too, type) {
+    too = '' + too;
+    var x = too.split('').reverse().join('');
+    var y = '';
+    var count = 1;
+    for (var i = 0; i < x.length; i++) {
+      y = y + x[i];
+
+      if (count % 3 === 0) y = y + ',';
+      count++;
+    }
+    var z = y.split('').reverse().join('');
+
+    if (z[0] === ',') z = z.substr(1, z.length - 1);
+
+    if (type === 'inc') z = '+ ' + z;
+    else z = '- ' + z;
+
+    return z;
   };
 
   return {
+    displayDate: function () {
+      var today = new Date();
+      var months = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
+
+      document.querySelector(DOMstrings.dateLabel).textContent =
+        months[today.getMonth()] + ' ' + today.getFullYear();
+    },
+
     getInput: function () {
       return {
         type: document.querySelector(DOMstrings.inputType).value, // inc or exp iig butsaana
@@ -23,6 +73,19 @@ var uiController = (function () {
         value: parseInt(document.querySelector(DOMstrings.inputValue).value),
       };
     },
+
+    displayPercentages: function (allPercentages) {
+      // Zarlagiin NodeList iig oloh (dom iin 1 elelmentiig buyu 1 tag iig node gej nerledeg)
+      var elements = document.querySelectorAll(
+        DOMstrings.expensePercentageLabel
+      );
+
+      // Element bolgonii % d zarlagiin %iig massivaas avch shivj oruulah
+      nodeListForeach(elements, function (el, index) {
+        el.textContent = allPercentages[index];
+      });
+    },
+
     getDOMstrings: function () {
       return DOMstrings;
     },
@@ -49,11 +112,22 @@ var uiController = (function () {
 
     // tusviig web deer uzuuleh
     tusviigUzuuleh: function (tusuv) {
-      document.querySelector(DOMstrings.tusuvLabel).textContent = tusuv.tusuv;
-      document.querySelector(DOMstrings.incomeLabel).textContent =
-        tusuv.totalInc;
-      document.querySelector(DOMstrings.expenseLabel).textContent =
-        tusuv.totalExp;
+      var type;
+      if (tusuv.tusuv > 0) type = 'inc';
+      else type = 'exp';
+
+      document.querySelector(DOMstrings.tusuvLabel).textContent = formatMoney(
+        tusuv.tusuv,
+        type
+      );
+      document.querySelector(DOMstrings.incomeLabel).textContent = formatMoney(
+        tusuv.totalInc,
+        'inc'
+      );
+      document.querySelector(DOMstrings.expenseLabel).textContent = formatMoney(
+        tusuv.totalExp,
+        'exp'
+      );
 
       if (tusuv.huvi !== 0) {
         document.querySelector(DOMstrings.percentageLabel).textContent =
@@ -85,7 +159,7 @@ var uiController = (function () {
       // ter html dotoroo orlogo zarlagiin utguudiig replace ashiglaj uurchilj ugnu
       html = html.replace('%id%', item.id);
       html = html.replace('%DESCRIPTION%', item.description);
-      html = html.replace('$VALUE$', item.value);
+      html = html.replace('$VALUE$', formatMoney(item.value, type));
 
       // beltgesen html ee DOM ruu hiij ugnu
 
@@ -109,6 +183,17 @@ var financeController = (function () {
     this.id = id;
     this.description = description;
     this.value = value;
+    this.percentage = -1;
+  };
+
+  Expense.prototype.calcPercentage = function (totalIncome) {
+    if (totalIncome > 0)
+      this.percentage = Math.round((this.value / totalIncome) * 100);
+    else this.percentage = 0;
+  };
+
+  Expense.prototype.getPercentage = function () {
+    return this.percentage;
   };
 
   var calculateTotal = function (type) {
@@ -148,7 +233,23 @@ var financeController = (function () {
       data.tusuv = data.totals.inc - data.totals.exp;
 
       // orlogo zarlagiin % iig tootsoolno
-      data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100);
+      if (data.totals.inc > 0)
+        data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100);
+      else data.huvi = 0;
+    },
+
+    calculatePercentages: function () {
+      data.items.exp.forEach(function (el) {
+        el.calcPercentage(data.totals.inc);
+      });
+    },
+
+    getPercentages: function () {
+      var allPercentages = data.items.exp.map(function (el) {
+        return el.getPercentage();
+      });
+
+      return allPercentages;
     },
 
     tusviigAvah: function () {
@@ -218,16 +319,30 @@ var appController = (function (uiController, financeController) {
       uiController.addListItem(item, input.type);
       uiController.clearFields();
 
-      // 4. tusviig tootsoolno
-
-      financeController.tusuvTootsooloh();
-
-      // 5. etssiin uldegdel delgetsend gargana
-      var tusuv = financeController.tusviigAvah();
-
-      // 6. Tusviin tootsoog delgetsend gargana.
-      uiController.tusviigUzuuleh(tusuv);
+      // Tusviig shineer tootsoolood delgetsend uzuulne
+      updateTusuv();
     }
+  };
+
+  var updateTusuv = function () {
+    // 4. tusviig tootsoolno
+
+    financeController.tusuvTootsooloh();
+
+    // 5. etssiin uldegdel delgetsend gargana
+    var tusuv = financeController.tusviigAvah();
+
+    // 6. Tusviin tootsoog delgetsend gargana.
+    uiController.tusviigUzuuleh(tusuv);
+
+    // 7. elementuudiin % iig tootsolono
+    financeController.calculatePercentages();
+
+    //8. elementuudiin tootsoolson %iig huleej avna
+    var allPercentages = financeController.getPercentages();
+
+    //9. Edgeer % iif delgetsend gargana
+    uiController.displayPercentages(allPercentages);
   };
 
   var setupEventListeners = function () {
@@ -259,10 +374,12 @@ var appController = (function (uiController, financeController) {
           // 1. Sanhuugiin module aas type, id ashiglaad ustgana
           financeController.deleteItem(type, itemId);
 
-          // delgets deerees ene elementiig ustgana
+          //2. delgets deerees ene elementiig ustgana
           uiController.deleteListItem(id);
 
-          // uldegdel tootsoog shinechilj haruulna
+          //3.  uldegdel tootsoog shinechilj haruulna
+          // Tusviig shineer tootsoolood delgetsend uzuulne
+          updateTusuv();
         }
       });
   };
@@ -271,6 +388,7 @@ var appController = (function (uiController, financeController) {
     // app iig ehluulhed delegtsen haragdah baidal
     init: function () {
       console.log(' Application started ....');
+      uiController.displayDate();
       uiController.tusviigUzuuleh({
         tusuv: 0,
         huvi: 0,
